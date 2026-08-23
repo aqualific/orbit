@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>Orbit</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#050505;color:#f5f5f5;
+ font-family:Inter,system-ui,-apple-system,sans-serif;
+ min-height:100vh
+}
+body:before{
+ content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;
+ background-image:
+ radial-gradient(circle at 18% 17%,#fff 0 1px,transparent 1.5px),
+ radial-gradient(circle at 73% 11%,#fff 0 1px,transparent 1.5px),
+ radial-gradient(circle at 91% 36%,#fff 0 1px,transparent 1.5px),
+ radial-gradient(circle at 39% 63%,#fff 0 1px,transparent 1.5px),
+ radial-gradient(circle at 12% 82%,#fff 0 1px,transparent 1.5px);
+ background-size:190px 190px
+}
+.wrap{max-width:680px;margin:auto;padding:26px 18px 110px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}
+.logo{font-size:18px;letter-spacing:.32em;font-weight:650}
+.muted{color:#858585;font-size:12px}
+.summary{display:flex;gap:8px;overflow:auto;margin-bottom:25px}
+.pill{white-space:nowrap;border:1px solid #292929;border-radius:99px;padding:8px 12px;font-size:12px;color:#bbb}
+h2{font-size:11px;letter-spacing:.18em;color:#777;margin:26px 3px 10px}
+.card{
+ border:1px solid #222;border-radius:16px;padding:15px;
+ margin:9px 0;background:rgba(13,13,13,.92)
+}
+.row{display:flex;gap:11px;align-items:flex-start}
+.check{
+ width:22px;height:22px;border:1px solid #666;border-radius:50%;
+ flex:0 0 auto;margin-top:1px;background:none;color:#fff
+}
+.check.done{background:#eee;color:#111}
+.content{flex:1;min-width:0}
+.title{font-size:15px;font-weight:600}
+.meta{font-size:11px;color:#888;margin-top:4px}
+.steps{font-size:13px;color:#bbb;line-height:1.55;margin-top:8px}
+.source{font-size:11px;color:#666;margin-top:10px}
+.actions{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+button{
+ color:#ddd;background:#111;border:1px solid #2b2b2b;
+ border-radius:9px;padding:7px 10px
+}
+button:active{transform:scale(.97)}
+.capture{
+ position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+ width:min(646px,calc(100% - 28px));background:#101010;
+ border:1px solid #333;border-radius:18px;padding:9px;display:flex;gap:8px;
+ box-shadow:0 10px 40px #000
+}
+textarea{
+ flex:1;resize:none;background:transparent;border:0;outline:0;
+ color:#fff;font:inherit;min-height:44px;max-height:130px;padding:10px
+}
+.add{border-radius:12px;padding:0 16px;background:#eee;color:#050505;font-weight:700}
+.hidden{display:none}
+.completedToggle{display:block;margin:20px auto;color:#777}
+.empty{text-align:center;color:#555;padding:50px 10px}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<header>
+ <div>
+   <div class="logo">✦ ORBIT</div>
+   <div class="muted">private work cockpit</div>
+ </div>
+ <button onclick="teach()">✦ Teach</button>
+</header>
+
+<div class="summary" id="summary"></div>
+
+<h2>NOW</h2>
+<div id="active"></div>
+
+<button class="completedToggle" onclick="toggleCompleted()">
+ <span id="completedCount">0</span> completed · show/hide
+</button>
+
+<div id="completed" class="hidden"></div>
+</div>
+
+<div class="capture">
+<textarea id="input" placeholder="Dump tasks, notes, updates…"></textarea>
+<button class="add" onclick="capture()">＋</button>
+</div>
+
+<script>
+const KEY="orbit-v1";
+let db=JSON.parse(localStorage.getItem(KEY)||'{"threads":[],"memory":[]}');
+
+function save(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+
+function infer(text){
+ let people=[];
+ let known=["April","Fann","Quentin","Charmaine","BS","Jia Yi","CC"];
+ known.forEach(p=>{if(text.toLowerCase().includes(p.toLowerCase()))people.push(p)});
+ db.memory.forEach(m=>{
+   if(text.toLowerCase().includes(m.term.toLowerCase()) && m.person) people.push(m.person)
+ });
+
+ let project="Ad hoc";
+ const t=text.toLowerCase();
+ if(t.includes("yda")) project="YDA";
+ else if(t.includes("ef ")||t.includes("executive function")||t.includes("fnirs")||t.includes("eeg")) project="EF Study";
+ else if(t.includes("rem")) project="REM";
+ else if(t.includes("citi")||t.includes("irb")||t.includes("ethic")) project="Ethics / CITI";
+ else if(t.includes("intergenerational")) project="Intergenerational Study";
+ else if(t.includes("timesheet")) project="Admin";
+
+ let waiting=/waiting|wait for|pending|chase|follow.?up/i.test(text);
+
+ let steps=text
+   .split(/[,;\n]|\bthen\b|\band then\b/gi)
+   .map(x=>x.trim())
+   .filter(x=>x.length>3);
+
+ if(steps.length>5) steps=steps.slice(0,5);
+
+ return {people:[...new Set(people)],project,waiting,steps};
+}
+
+function capture(){
+ const box=document.getElementById("input");
+ const raw=box.value.trim();
+ if(!raw)return;
+
+ // Separate lines can become separate work threads.
+ // A long single line stays together as one thread.
+ const chunks=raw.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+
+ chunks.forEach(text=>{
+   const i=infer(text);
+   db.threads.unshift({
+     id:crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random(),
+     original:text,
+     title:makeTitle(text),
+     created:new Date().toISOString(),
+     updated:new Date().toISOString(),
+     project:i.project,
+     people:i.people,
+     waiting:i.waiting,
+     steps:i.steps,
+     progress:0,
+     done:false,
+     history:[{time:new Date().toISOString(),text:text,type:"original"}]
+   });
+ });
+ box.value="";
+ save();
+}
+
+function makeTitle(s){
+ let x=s.split(/[,.;]/)[0].trim();
+ return x.length>58?x.slice(0,55)+"…":x;
+}
+
+function done(id){
+ const x=db.threads.find(t=>t.id==id);
+ x.done=!x.done;
+ x.updated=new Date().toISOString();
+ x.history.push({time:x.updated,text:x.done?"Marked complete":"Reopened",type:"status"});
+ save();
+}
+
+function updateThread(id){
+ const x=db.threads.find(t=>t.id==id);
+ const u=prompt("Quick update — type naturally:", "");
+ if(!u)return;
+
+ x.history.push({time:new Date().toISOString(),text:u,type:"progress"});
+ x.updated=new Date().toISOString();
+
+ if(/done|finished|completed|settled|sent already|sent alr/i.test(u)) x.progress=Math.min(90,x.progress+35);
+ else x.progress=Math.min(85,x.progress+20);
+
+ if(/waiting|pending|await|hasn't replied|havent replied/i.test(u)) x.waiting=true;
+ if(/replied|received|no longer waiting/i.test(u)) x.waiting=false;
+
+ // Keep original source untouched. Add progress as context only.
+ x.lastUpdate=u;
+ save();
+}
+
+function teach(){
+ const s=prompt("Teach Orbit one thing.\nExample: EF means Executive Functioning Study");
+ if(!s)return;
+
+ const m=s.match(/^(.+?)\s+(?:means|=|is)\s+(.+)$/i);
+ if(m){
+   db.memory.push({term:m[1].trim(),meaning:m[2].trim()});
+ }else{
+   db.memory.push({term:s,meaning:s});
+ }
+ save();
+}
+
+function age(iso){
+ const d=Math.floor((Date.now()-new Date(iso))/86400000);
+ if(d===0)return"today";
+ if(d===1)return"1d ago";
+ return d+"d ago";
+}
+
+function card(x){
+ let stepText=x.steps.length>1
+   ? x.steps.slice(0,3).map(s=>"· "+esc(s)).join("<br>")
+   : "";
+
+ return `<div class="card">
+   <div class="row">
+    <button class="check ${x.done?"done":""}" onclick="done('${x.id}')">${x.done?"✓":""}</button>
+    <div class="content">
+      <div class="title">${esc(x.title)}</div>
+      <div class="meta">${esc(x.project)}
+        ${x.people.length?" · "+esc(x.people.join(", ")):""}
+        ${x.waiting?" · WAITING":""}
+        · ${age(x.updated)}
+      </div>
+      ${x.lastUpdate?`<div class="steps">↳ ${esc(x.lastUpdate)}</div>`:stepText?`<div class="steps">${stepText}</div>`:""}
+      <div class="source">Original preserved · ${new Date(x.created).toLocaleString()}</div>
+      ${!x.done?`<div class="actions">
+        <button onclick="updateThread('${x.id}')">◐ Update</button>
+      </div>`:""}
+    </div>
+   </div>
+ </div>`;
+}
+
+function toggleCompleted(){
+ document.getElementById("completed").classList.toggle("hidden")
+}
+
+function render(){
+ const active=db.threads.filter(x=>!x.done);
+ const completed=db.threads.filter(x=>x.done);
+
+ document.getElementById("active").innerHTML=
+   active.length?active.map(card).join(""):`<div class="empty">Quiet orbit.<br>Dump something below.</div>`;
+
+ document.getElementById("completed").innerHTML=completed.map(card).join("");
+ document.getElementById("completedCount").textContent=completed.length;
+
+ const waiting=active.filter(x=>x.waiting).length;
+ const projects=new Set(active.map(x=>x.project)).size;
+
+ document.getElementById("summary").innerHTML=
+ `<div class="pill">${active.length} open</div>
+  <div class="pill">${waiting} waiting</div>
+  <div class="pill">${projects} projects</div>
+  <div class="pill">${db.memory.length} learned</div>`;
+}
+
+document.getElementById("input").addEventListener("keydown",e=>{
+ if((e.ctrlKey||e.metaKey)&&e.key==="Enter")capture()
+});
+
+render();
+</script>
+</body>
+</html>
