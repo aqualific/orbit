@@ -40,7 +40,7 @@ const SUPABASE_PUBLISHABLE_KEY='sb_publishable_WK2Svo_sJgxSY4EOxlasnQ_lKmHYGMx';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 const DBKEY='orbit-v2';
 let db=JSON.parse(localStorage.getItem(DBKEY)||'{"threads":[],"memory":[],"availability":[],"settings":{"filter":"all"},"lastSynced":null}');
-let session=null; let vaultSalt=null; let currentKey=null;
+let session=null; let vaultSalt=null; let currentKey=null; let activeVaultPass=null; let remoteVersion=0; let syncing=false;
 function saveLocal(){localStorage.setItem(DBKEY,JSON.stringify(db));render();}
 function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random();}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
@@ -74,7 +74,7 @@ function render(){
  const projects=[...new Set(active.map(x=>x.project))];document.getElementById('orbitMap').querySelectorAll('.planet').forEach(n=>n.remove());projects.slice(0,12).forEach((p,i)=>{const angle=i*(Math.PI*2/Math.max(projects.length,1));const rx=[90,165,250][i%3],ry=[60,110,165][i%3];const el=document.createElement('div');el.className='planet';el.style.left=`calc(50% + ${Math.cos(angle)*rx}px)`;el.style.top=`calc(50% + ${Math.sin(angle)*ry}px)`;el.innerHTML=`<span>${esc(p)}</span>`;document.getElementById('orbitMap').appendChild(el)});
  const total=db.threads.length,done=db.threads.filter(x=>x.done).length,wait=db.threads.filter(x=>x.waiting&&!x.done).length;document.getElementById('stats').innerHTML=`<div class="stat"><b>${active.length}</b><span>open</span></div><div class="stat"><b>${done}</b><span>completed</span></div><div class="stat"><b>${wait}</b><span>waiting</span></div><div class="stat"><b>${projects.length}</b><span>active projects</span></div>`;document.getElementById('insightNotes').innerHTML=`<div class="card"><div class="section-label">ORBIT OBSERVES</div><div class="muted">Your local history is starting to teach Orbit your work patterns. As the dataset grows, it can learn which tasks you finish quickly, which work tends to stall, and which time blocks suit different kinds of work.</div></div>`;
  document.getElementById('memoryList').innerHTML=db.memory.map((m,i)=>`<div class="memory"><div style="font-size:12px;color:#ddd">${esc(m.text||m.term)}</div></div>`).join('');document.getElementById('availabilityList').innerHTML=db.availability.map(a=>`<div class="memory"><div style="font-size:12px;color:#ddd">${esc(a)}</div></div>`).join('');
- document.getElementById('accountStatus').textContent=session?`Signed in as ${session.user.email}. Vault is locked until you enter the same passphrase used to encrypt it.`:'Not connected.';
+ document.getElementById('accountStatus').textContent=session?`Signed in as ${session.user.email} · ${db.lastSynced?'✓ Synced '+new Date(db.lastSynced).toLocaleTimeString():'Not yet synced'}`:'Not connected.';
 }
 function toast(t){const el=document.getElementById('toast');el.classList.remove('hidden');el.innerHTML=`<div class="modal-panel"><div>${esc(t)}</div></div>`;setTimeout(()=>el.classList.add('hidden'),1400)}
 async function deriveKey(pass,salt){const enc=new TextEncoder();const mat=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},mat,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
@@ -82,15 +82,139 @@ function bytesToB64(bytes){let s='';bytes.forEach(b=>s+=String.fromCharCode(b));
 async function encryptDb(password){let salt=vaultSalt?b64ToBytes(vaultSalt):crypto.getRandomValues(new Uint8Array(16));vaultSalt=vaultSalt||bytesToB64(salt);currentKey=await deriveKey(password,salt);const iv=crypto.getRandomValues(new Uint8Array(12));const plain=new TextEncoder().encode(JSON.stringify(db));const cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},currentKey,plain);return JSON.stringify({v:1,salt:vaultSalt,iv:bytesToB64(new Uint8Array(iv)),cipher:bytesToB64(new Uint8Array(cipher))});}
 async function decryptPayload(password,payload){const p=JSON.parse(payload);const salt=b64ToBytes(p.salt);currentKey=await deriveKey(password,salt);const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64ToBytes(p.iv)},currentKey,b64ToBytes(p.cipher));return JSON.parse(new TextDecoder().decode(plain));}
 async function openAuth(){document.getElementById('modalRoot').innerHTML=`<div class="modal"><div class="modal-panel"><div class="eyebrow">ORBIT ACCOUNT</div><h2>Unlock your Orbit.</h2><div class="muted">Use the same email + Orbit passphrase on every device. The passphrase encrypts your vault locally; it is not uploaded to Supabase.</div><div class="field"><label>EMAIL</label><input id="authEmail" type="email" autocomplete="email"></div><div class="field"><label>PASSWORD</label><input id="authPw" type="password" autocomplete="current-password"></div><div class="field"><label>ORBIT VAULT PASSPHRASE</label><input id="vaultPw" type="password" autocomplete="new-password"><div class="muted">Keep this separate from your Supabase password. It unlocks your encrypted Orbit vault and is never uploaded.</div></div><div class="modal-actions"><button class="primary-btn" id="signInBtn">Sign in</button><button class="small-btn" id="signUpBtn">Create account</button><button class="small-btn" onclick="closeModal()">Cancel</button></div><div id="authMsg" class="msg"></div></div></div>`;document.getElementById('signInBtn').onclick=()=>auth(false);document.getElementById('signUpBtn').onclick=()=>auth(true);}
-async function auth(create){const email=document.getElementById('authEmail').value.trim();const pass=document.getElementById('authPw').value;const vaultPass=document.getElementById('vaultPw').value;if(!email||!pass||!vaultPass){document.getElementById('authMsg').textContent='Enter email, password and vault passphrase.';return}let r=create?await sb.auth.signUp({email,password:pass}):await sb.auth.signInWithPassword({email,password:pass});if(r.error){document.getElementById('authMsg').textContent=r.error.message;return}session=r.data.session;vaultSalt=null;currentKey=null;document.getElementById('authMsg').textContent='Connected. Syncing…';try{await syncPull(vaultPass);await syncPush(vaultPass);closeModal();render();toast('Orbit connected and synced.')}catch(e){document.getElementById('authMsg').textContent=e.message||String(e)}}
-async function syncPull(vaultPass){if(!session)throw new Error('Sign in first.');const {data,error}=await sb.from('orbit_vaults').select('payload,version,updated_at').eq('user_id',session.user.id).maybeSingle();if(error)throw error;if(!data){vaultSalt=null;return}const remote=await decryptPayload(vaultPass,data.payload);if(remote&&remote.threads){db=remote;localStorage.setItem(DBKEY,JSON.stringify(db));render();}}
-async function syncPush(vaultPass){if(!session)throw new Error('Sign in first.');const payload=await encryptDb(vaultPass);const {error}=await sb.from('orbit_vaults').upsert({user_id:session.user.id,payload,version:Date.now(),updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error;db.lastSynced=new Date().toISOString();localStorage.setItem(DBKEY,JSON.stringify(db));render();}
-async function sync(){if(!session){openAuth();return}const vp=prompt('Enter your Orbit vault passphrase to sync:');if(!vp)return;try{await syncPush(vp);toast('Synced.')}catch(e){toast(e.message||'Sync failed.')}}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function isoTime(x){const t=Date.parse(x||'');return Number.isFinite(t)?t:0;}
+function eventKey(h){return [h.id||'',h.time||'',h.type||'',h.text||''].join('|');}
+function ensureThreadShape(t){const x=clone(t||{});x.history=Array.isArray(x.history)?x.history:[];x.steps=Array.isArray(x.steps)?x.steps:[];x.people=Array.isArray(x.people)?x.people:[];x.created=x.created||new Date().toISOString();x.updated=x.updated||x.created;return x;}
+function mergeHistory(a,b){const map=new Map();[...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].forEach(h=>{const x=clone(h);x.id=x.id||eventKey(x);map.set(eventKey(x),x);});return [...map.values()].sort((x,y)=>isoTime(x.time)-isoTime(y.time));}
+function latestValue(a,b,key){const at=isoTime(a.updated),bt=isoTime(b.updated);return bt>at?clone(b[key]):clone(a[key]);}
+function mergeThread(localThread,remoteThread){
+  const l=ensureThreadShape(localThread), r=ensureThreadShape(remoteThread);
+  const newer=isoTime(r.updated)>isoTime(l.updated)?r:l;
+  const merged=clone(newer);
+  merged.history=mergeHistory(l.history,r.history);
+  merged.people=[...new Set([...(l.people||[]),...(r.people||[])])];
+  merged.steps=[...new Set([...(l.steps||[]),...(r.steps||[])])];
+  merged.created=isoTime(l.created)<=isoTime(r.created)?l.created:r.created;
+  const texts=[l.lastUpdate,r.lastUpdate].filter(Boolean);
+  if(texts.length>1 && l.lastUpdate!==r.lastUpdate){
+    merged.history=mergeHistory(merged.history,[
+      {id:uid(),time:new Date().toISOString(),type:'sync-merge',text:'Merged updates from multiple devices.'}
+    ]);
+  }
+  return merged;
+}
+function mergeDb(localDb,remoteDb){
+  const l=clone(localDb||{}), r=clone(remoteDb||{});
+  const out={...r,...l};
+  const localThreads=Array.isArray(l.threads)?l.threads:[];
+  const remoteThreads=Array.isArray(r.threads)?r.threads:[];
+  const byId=new Map();
+  remoteThreads.forEach(t=>byId.set(t.id,ensureThreadShape(t)));
+  localThreads.forEach(t=>{
+    if(!byId.has(t.id)) byId.set(t.id,ensureThreadShape(t));
+    else byId.set(t.id,mergeThread(t,byId.get(t.id)));
+  });
+  out.threads=[...byId.values()].sort((a,b)=>isoTime(b.updated)-isoTime(a.updated));
+  const mem=[...(r.memory||[]),...(l.memory||[])];
+  const mm=new Map();mem.forEach(m=>mm.set(JSON.stringify(m),m));out.memory=[...mm.values()];
+  const av=[...(r.availability||[]),...(l.availability||[])];out.availability=[...new Set(av)];
+  out.settings={...(r.settings||{}),...(l.settings||{})};
+  out.lastSynced=new Date().toISOString();
+  return out;
+}
+async function fetchRemote(){
+  if(!session)throw new Error('Sign in first.');
+  const {data,error}=await sb.from('orbit_vaults').select('payload,version,updated_at').eq('user_id',session.user.id).maybeSingle();
+  if(error)throw error;
+  if(!data)return {db:null,version:0};
+  const remote=await decryptPayload(activeVaultPass,data.payload);
+  remoteVersion=Number(data.version||0);
+  return {db:remote,version:remoteVersion};
+}
+async function syncNow(showToast=true){
+  if(!session){openAuth();return;}
+  if(!activeVaultPass){openAuth();return;}
+  if(syncing)return;
+  syncing=true;
+  try{
+    for(let attempt=0;attempt<4;attempt++){
+      setSyncStatus(attempt?`Merging again (${attempt+1}/4)…`:'Merging…');
+      const remoteInfo=await fetchRemote();
+      const merged=remoteInfo.db?mergeDb(db,remoteInfo.db):clone(db);
+      db=merged;
+      const mergedPayload=await encryptDb(activeVaultPass);
+      const newVersion=Math.max(Date.now(),Number(remoteInfo.version||0)+1);
+      let result;
+      if(remoteInfo.db){
+        result=await sb.from('orbit_vaults')
+          .update({payload:mergedPayload,version:newVersion,updated_at:new Date().toISOString()})
+          .eq('user_id',session.user.id)
+          .eq('version',Number(remoteInfo.version||0))
+          .select('version,updated_at')
+          .maybeSingle();
+      } else {
+        result=await sb.from('orbit_vaults')
+          .insert({user_id:session.user.id,payload:mergedPayload,version:newVersion,updated_at:new Date().toISOString()})
+          .select('version,updated_at')
+          .maybeSingle();
+      }
+      if(result.error){
+        // Another device may have created the vault at the same time.
+        if(result.error.code==='23505' && !remoteInfo.db){continue;}
+        throw result.error;
+      }
+      // Zero rows means another device changed the vault after our read.
+      if(!result.data){continue;}
+      remoteVersion=Number(result.data.version||newVersion);
+      db.lastSynced=result.data.updated_at||new Date().toISOString();
+      localStorage.setItem(DBKEY,JSON.stringify(db));
+      render();
+      setSyncStatus('✓ Synced across devices');
+      if(showToast)toast('Synced across devices.');
+      return;
+    }
+    throw new Error('Orbit could not resolve a simultaneous sync. Please try Sync again.');
+  }catch(e){
+    setSyncStatus('Sync issue');
+    if(showToast)toast(e.message||'Sync failed.'); else console.error(e);
+    throw e;
+  }finally{syncing=false;}
+}
+async function syncPull(vaultPass){
+  if(!session)throw new Error('Sign in first.');
+  activeVaultPass=vaultPass||activeVaultPass;
+  if(!activeVaultPass)throw new Error('Enter your Orbit vault passphrase.');
+  const remoteInfo=await fetchRemote();
+  if(remoteInfo.db){
+    db=mergeDb(db,remoteInfo.db);
+    localStorage.setItem(DBKEY,JSON.stringify(db));
+    render();
+  }
+}
+async function syncPush(vaultPass){
+  activeVaultPass=vaultPass||activeVaultPass;
+  if(!activeVaultPass)throw new Error('Enter your Orbit vault passphrase.');
+  await syncNow(true);
+}
+async function auth(create){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPw').value;
+  const vaultPass=document.getElementById('vaultPw').value;
+  if(!email||!pass||!vaultPass){document.getElementById('authMsg').textContent='Enter email, password and vault passphrase.';return}
+  let r=create?await sb.auth.signUp({email,password:pass}):await sb.auth.signInWithPassword({email,password:pass});
+  if(r.error){document.getElementById('authMsg').textContent=r.error.message;return}
+  if(!r.data.session){document.getElementById('authMsg').textContent='Account created, but email confirmation is still required.';return}
+  session=r.data.session;activeVaultPass=vaultPass;vaultSalt=null;currentKey=null;document.getElementById('authMsg').textContent='Connected. Merging your Orbit…';
+  try{await syncNow(false);closeModal();render();toast('Orbit connected and merged.')}catch(e){document.getElementById('authMsg').textContent=e.message||String(e)}
+}
+async function sync(){if(!session){openAuth();return}if(!activeVaultPass){openAuth();return}await syncNow(true)}
+function setSyncStatus(text){const el=document.getElementById('accountStatus');if(el&&session)el.textContent=`Signed in as ${session.user.email} · ${text}`;}
 function exportBackup(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='orbit-backup.json';a.click();URL.revokeObjectURL(a.href);}
 function importBackup(file){const r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);saveLocal();toast('Backup imported.')}catch{toast('Invalid backup.')}};r.readAsText(file)}
 for(const n of document.querySelectorAll('.nav'))n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));n.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(n.dataset.target).classList.add('active');render()};
 document.getElementById('captureBtn').onclick=capture;document.getElementById('captureInput').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')capture()});document.getElementById('organiseBtn').onclick=()=>toast('Orbit organises each capture using project, people, urgency and context rules.');
-document.getElementById('settingsBtn').onclick=()=>{document.querySelector('[data-target=settings]').click()};document.getElementById('syncBtn').onclick=sync;document.getElementById('accountBtn').onclick=openAuth;document.getElementById('pushBtn').onclick=async()=>{if(!session){openAuth();return}const vp=prompt('Vault passphrase:');if(vp){try{await syncPush(vp);toast('Uploaded encrypted vault.')}catch(e){toast(e.message)}}};document.getElementById('pullBtn').onclick=async()=>{if(!session){openAuth();return}const vp=prompt('Vault passphrase:');if(vp){try{await syncPull(vp);toast('Pulled from vault.')}catch(e){toast(e.message)}}};
+document.getElementById('settingsBtn').onclick=()=>{document.querySelector('[data-target=settings]').click()};document.getElementById('syncBtn').onclick=sync;document.getElementById('accountBtn').onclick=openAuth;document.getElementById('pushBtn').onclick=async()=>{if(!session||!activeVaultPass){openAuth();return}try{await syncNow(true)}catch(e){toast(e.message)}};document.getElementById('pullBtn').onclick=async()=>{if(!session||!activeVaultPass){openAuth();return}try{await syncNow(true)}catch(e){toast(e.message)}};
 document.querySelectorAll('#filterTabs .chip').forEach(b=>b.onclick=()=>{db.settings.filter=b.dataset.filter;saveLocal()});document.getElementById('memoryBtn').onclick=()=>{const t=document.getElementById('memoryInput').value.trim();if(!t)return;db.memory.unshift({text:t,created:new Date().toISOString()});document.getElementById('memoryInput').value='';saveLocal();toast('Orbit learned that.');};document.getElementById('availabilityBtn').onclick=()=>{const t=document.getElementById('availabilityInput').value.trim();if(!t)return;db.availability.unshift(t);document.getElementById('availabilityInput').value='';saveLocal();};document.getElementById('exportBtn').onclick=exportBackup;document.getElementById('importInput').onchange=e=>e.target.files[0]&&importBackup(e.target.files[0]);document.getElementById('clearBtn').onclick=()=>{if(confirm('Delete all local Orbit data on this device?')){localStorage.removeItem(DBKEY);location.reload()}};
-sb.auth.getSession().then(({data})=>{session=data.session||null;render()});window.addEventListener('online',()=>{if(session)render()});render();
+sb.auth.getSession().then(({data})=>{session=data.session||null;render()});window.addEventListener('online',()=>{if(session&&activeVaultPass)syncNow(false);render()});window.addEventListener('focus',()=>{if(session&&activeVaultPass)syncNow(false)});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&session&&activeVaultPass)syncNow(false)});setInterval(()=>{if(document.visibilityState==='visible'&&session&&activeVaultPass)syncNow(false)},60000);render();
 </script></body></html>
