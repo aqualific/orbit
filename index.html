@@ -19,10 +19,10 @@
 <header class="top"><button class="brand" id="brandBtn"><img src="./icons/orbit-icon.svg" alt=""><span>ORBIT</span></button><div class="top-actions"><button class="small-btn" id="askBtn" title="Ask Orbit">✦ Ask</button><button class="icon-btn" id="syncBtn" title="Sync">↻</button><button class="icon-btn" id="settingsBtn" title="Settings">⚙</button></div></header>
 <main>
 <section id="home" class="view active"><div class="hero"><div><div class="eyebrow" id="dateLabel"></div><h1>What matters now.</h1></div><div class="pressure" id="pressureBadge">Calm</div></div>
-<div class="card"><div class="capture-head"><div><div class="section-label">CAPTURE</div><div class="muted">Dump first. Orbit organises after. Original text stays intact.</div></div><div class="focus-actions"><span class="ai-badge">LOCAL + GEN AI</span><button class="small-btn" id="organiseBtn">Organise</button><button class="small-btn" id="askBtn2">Ask</button></div></div><textarea id="captureInput" class="capture-input" placeholder="Type anything. One line per item, or one detailed brain-dump..." spellcheck="true"></textarea><div class="capture-foot"><div class="micro"><span id="draftBadge">No draft</span> · Ctrl/Cmd + Enter captures</div><button class="primary-btn" id="captureBtn">Add to Orbit</button></div></div>
+<div class="card"><div class="capture-head"><div><div class="section-label">CAPTURE</div><div class="muted">Dump it exactly as it comes. Orbit cleans the structure, not your voice.</div></div><div class="focus-actions"><span class="ai-badge">✦ ORGANISE</span><button class="small-btn" id="askBtn2">Ask</button></div></div><textarea id="captureInput" class="capture-input" placeholder="Type anything — messy meeting notes, edits, reminders, brain-dumps..." spellcheck="true"></textarea><div class="capture-foot"><div><div class="micro"><span id="draftBadge">No draft</span></div><div class="micro" id="organiseHint" style="margin-top:3px">One click turns this into sensible work threads.</div></div><div class="actions" style="margin-top:0"><button class="small-btn" id="saveRawBtn">Save raw</button><button class="primary-btn" id="organiseAndSaveBtn">Organise & save</button></div></div></div>
 <div class="section"><div class="section-head"><div><div class="section-label">TODAY</div><div class="muted">Recommended, not compulsory.</div></div></div><div id="todayList"></div></div><div class="card" style="margin-top:14px"><div class="capture-head"><div><div class="section-label">ORBIT PA</div><div class="ai-title">✦ Ask Orbit</div><div class="ai-subtitle">Gemini handles the fuzzy bits; Orbit sends only the context it needs.</div></div><span class="ai-badge">GEN AI · GEMINI</span></div><div class="quick-row"><button class="ai-quick" onclick="openAssistant('What should I do now?')">What now?</button><button class="ai-quick" onclick="openAssistant('What is at risk?')">At risk</button><button class="ai-quick" onclick="openAssistant('What am I waiting on?')">Waiting</button><button class="ai-quick" onclick="openAssistant('Plan my next 3 days.')">Plan</button></div><input class="ai-input" id="homeAIInput" placeholder="Ask Orbit anything about your work…"><div class="ai-actions"><button class="primary-btn" id="homeAIRun">Ask Orbit</button><span class="micro" id="homeAIStatus">Ready</span></div><div id="homeAIOut" class="assistant-answer" style="margin-top:10px"></div></div>
 <div class="section"><div class="section-head"><div><div class="section-label">WAITING</div><div class="muted">Open loops with someone else.</div></div></div><div id="waitingList"></div></div></section>
-<section id="work" class="view"><div class="view-head"><div><div class="eyebrow">WORK</div><h2>Everything active.</h2></div><button class="small-btn" id="reclassifyBtn">Reclassify</button></div><div class="tabs" id="filterTabs"><button class="chip active" data-filter="all">All</button><button class="chip" data-filter="hot">Hot</button><button class="chip" data-filter="waiting">Waiting</button><button class="chip" data-filter="adhoc">Ad hoc</button><button class="chip" data-filter="trash">Trash</button><button class="chip" data-filter="done">Done</button></div><div id="workList" class="card"></div></section>
+<section id="work" class="view"><div class="view-head"><div><div class="eyebrow">WORK</div><h2>Everything active.</h2></div><button class="small-btn" id="reclassifyBtn">Organise inbox</button></div><div class="tabs" id="filterTabs"><button class="chip active" data-filter="all">All</button><button class="chip" data-filter="hot">Hot</button><button class="chip" data-filter="waiting">Waiting</button><button class="chip" data-filter="adhoc">Ad hoc</button><button class="chip" data-filter="trash">Trash</button><button class="chip" data-filter="done">Done</button></div><div id="workList" class="card"></div></section>
 <section id="orbit" class="view"><div class="eyebrow">ORBIT MAP</div><h2>Your work universe.</h2><div class="swipe-hint">SWIPE LEFT / RIGHT</div><div class="orbit-map" id="orbitMap"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="sun"></div></div><div class="footer-note">Tiny planets drift and orbit while you browse. Swipe left/right to move between Orbit pages.</div></section>
 <section id="insights" class="view"><div class="eyebrow">INSIGHTS</div><h2>How you work.</h2><div class="grid" id="stats"></div><div class="section" id="insightNotes"></div></section>
 <section id="settings" class="view"><div class="eyebrow">SETTINGS</div><h2>Keep Orbit yours.</h2>
@@ -30,7 +30,7 @@
 <div class="card"><div class="section-label">PERSONAL MEMORY</div><div class="muted">Teach Orbit safe, durable context. These notes become part of your encrypted vault.</div><textarea id="memoryInput" class="capture-input" style="min-height:90px" placeholder="e.g. EF means Executive Functioning study. When I say BS, I mean Boon Siang."></textarea><div class="actions"><button class="small-btn" id="memoryBtn">Learn this</button></div><div id="memoryList"></div></div>
 <div class="card"><div class="section-label">AVAILABILITY</div><div class="muted">Optional free/busy blocks. No meeting titles needed.</div><input id="availabilityInput" class="field-input" style="margin-top:10px;width:100%;background:#08090c;border:1px solid #22232a;color:#fff;border-radius:11px;padding:11px" placeholder="e.g. 09:30-10:30, 14:00-15:00"><div class="actions"><button class="small-btn" id="availabilityBtn">Save today's blocks</button></div><div id="availabilityList"></div></div>
 <div class="card"><div class="section-label">PRIVACY</div><div class="settings-row"><span class="muted">Original notes preserved</span><strong style="color:var(--ok)">ON</strong></div><div class="settings-row"><span class="muted">Encrypted before sync</span><strong style="color:var(--ok)">ON</strong></div><div class="settings-row"><span class="muted">External AI</span><strong style="color:var(--ok)">GEMINI FREE · COMPACT</strong></div><div class="footer-note">Do not put information into Orbit unless your organisation permits that information to be stored on a personal encrypted service.</div></div>
-<div class="card"><div class="section-label">RECOVERY</div><div class="muted">Orbit keeps three rolling local snapshots: ~5 minutes ago, yesterday, and the day before. They overwrite in place as new snapshots are created.</div><div class="actions"><button class="small-btn" id="exportBtn">Export JSON</button><button class="small-btn" id="exportHtmlBtn">Export readable recovery</button><label class="small-btn">Import JSON<input id="importInput" type="file" accept="application/json" hidden></label></div><div class="recover-note" id="backupStatus"></div><div id="snapshotList" class="memory"></div></div><div class="card"><div class="section-label">DATA</div><div class="actions"><button class="danger-btn" id="clearBtn">Delete local data</button></div></div>
+<div class="card"><div class="section-label">AI ASSISTANT</div><div class="settings-row"><span class="muted">Provider</span><strong style="color:var(--ok)">Gemini Free</strong></div><div class="settings-row"><span class="muted">Use</span><span class="muted">Organise · workload · follow-up · planning</span></div><div class="actions"><button class="small-btn" id="testAiBtn">Test Orbit AI</button></div><div class="footer-note" id="aiStatusNote">Orbit uses local logic when offline or when Gemini is unavailable.</div></div><div class="card"><div class="section-label">RECOVERY</div><div class="muted">Orbit keeps three rolling local snapshots: ~5 minutes ago, yesterday, and the day before. They overwrite in place as new snapshots are created.</div><div class="actions"><button class="small-btn" id="exportBtn">Export JSON</button><button class="small-btn" id="exportHtmlBtn">Export readable recovery</button><label class="small-btn">Import JSON<input id="importInput" type="file" accept="application/json" hidden></label></div><div class="recover-note" id="backupStatus"></div><div id="snapshotList" class="memory"></div></div><div class="card"><div class="section-label">DATA</div><div class="actions"><button class="danger-btn" id="clearBtn">Delete local data</button></div></div>
 </section>
 </main>
 </div><nav class="bottom"><button class="nav active" data-target="home">Today</button><button class="nav" data-target="work">Work</button><button class="nav" data-target="orbit">Orbit</button><button class="nav" data-target="insights">Insights</button><button class="nav" data-target="settings">Settings</button></nav></div>
@@ -79,24 +79,30 @@ async function smartOrganise(){
   const cap=document.getElementById('captureInput');
   const raw=(cap?.value||'').trim();
   if(!raw){
-    const inbox=db.threads.filter(x=>!x.deletedAt && !x.organized);
-    if(!inbox.length){toast('Nothing new to organise.');return;}
+    const inbox=db.threads.filter(x=>!x.deletedAt && (!x.organized || x.project==='Ad hoc'));
+    if(!inbox.length){toast('Nothing waiting to be organised.');return;}
     return await organiseThreads(inbox);
   }
+  await organiseCapture(raw);
+}
+async function organiseCapture(raw){
+  const cap=document.getElementById('captureInput');
   const status=document.getElementById('draftBadge');
   if(status)status.textContent='Orbit is organising…';
   try{
-    const payload=await callGenerativeAI('__ORGANISE__', {raw, mode:'organise', existing:buildAIContext('organise')});
-    await applyOrganisation(payload, raw);
-    cap.value=''; clearDraft();
-    toast(payload.witty || 'Organised. One messy note in; sensible work threads out.');
+    const payload=await callGenerativeAI('__ORGANISE__',{raw,mode:'organise_capture',existing:buildAIContext('')});
+    const groups=normaliseOrgResult(payload);
+    if(!groups.length)throw new Error('Orbit could not form a useful work structure.');
+    applyOrganisation(payload,raw);
+    if(cap){cap.value='';clearDraft();}
+    toast(payload.witty||'Organised. One messy capture → sensible work threads.');
   }catch(err){
-    if(status)status.textContent='Organise failed';
-    toast('Orbit could not organise that yet. Your original text is still safe.');
-    console.error(err);
+    // Never lose a capture just because AI is down.
+    if(raw && !db.threads.some(x=>x.original===raw && Date.now()-Date.parse(x.created||'')<15000)) saveRawCapture(raw);
+    if(status)status.textContent='Saved safely · organise later';
+    toast('Saved safely. Orbit could not organise this yet.');
   }
 }
-
 async function organiseThreads(items){
   const raw=items.map(x=>`THREAD ${x.id}\n${x.original}`).join('\n\n');
   const payload=await callGenerativeAI('__ORGANISE__',{raw,mode:'organise_existing',existing:buildAIContext('organise existing')});
@@ -104,60 +110,59 @@ async function organiseThreads(items){
 }
 
 function normaliseOrgResult(payload){
-  const groups=Array.isArray(payload?.work_threads)?payload.work_threads:[];
-  return groups.map(g=>({
-    title:String(g.title||'Untitled work').trim(),
-    project:String(g.project||'Ad hoc').trim(),
-    people:Array.isArray(g.people)?g.people.map(String).slice(0,8):[],
-    due:g.due?String(g.due).trim():'',
-    waiting:!!g.waiting,
-    steps:Array.isArray(g.steps)?g.steps.map(String).filter(Boolean).slice(0,8):[],
-    source_indexes:Array.isArray(g.source_indexes)?g.source_indexes.map(Number).filter(Number.isFinite):[],
-    source_ids:Array.isArray(g.source_ids)?g.source_ids.map(String):[],
-    why:String(g.why||'').trim()
-  }));
+ const groups=Array.isArray(payload?.work_threads)?payload.work_threads:[];
+ return groups.map(g=>({
+  title:String(g.title||'Untitled work').trim(), project:String(g.project||'Ad hoc').trim(),
+  work_type:String(g.work_type||'General').trim(), scope:String(g.scope||'Medium').trim(), urgency:String(g.urgency||'Normal').trim(),
+  people:Array.isArray(g.people)?g.people.map(String).filter(Boolean).slice(0,8):[], due:g.due?String(g.due).trim():'', waiting:!!g.waiting,
+  next_action:String(g.next_action||'').trim(), steps:Array.isArray(g.steps)?g.steps.map(String).filter(Boolean).slice(0,8):[],
+  source_indexes:Array.isArray(g.source_indexes)?g.source_indexes.map(Number).filter(Number.isFinite):[], source_ids:Array.isArray(g.source_ids)?g.source_ids.map(String):[], why:String(g.why||'').trim()
+ }));
 }
-
-async function applyOrganisation(payload,raw){
+function applyOrganisation(payload,raw){
   const groups=normaliseOrgResult(payload);
-  if(!groups.length){toast('Orbit could not find a coherent work structure. Original text kept.');return;}
+  if(!groups.length)throw new Error('No work threads returned.');
   const stamp=new Date().toISOString();
-  groups.forEach(g=>{
-    const original=raw;
-    const t={id:uid(),original,title:g.title,created:stamp,updated:stamp,project:g.project||'Ad hoc',people:[...new Set(g.people)],waiting:!!g.waiting,due:g.due||'',steps:g.steps,done:false,progress:0,lastUpdate:'',deletedAt:null,organized:true,history:[{id:uid(),time:stamp,type:'original',text:original},{id:uid(),time:stamp,type:'ai-organise',text:`Orbit organised this capture into: ${g.title}${g.project&&g.project!=='Ad hoc'?` · ${g.project}`:''}.${g.why?' '+g.why:''}`} ]};
+  groups.forEach((g,idx)=>{
+    const sourceText=raw;
+    const t={
+      id:uid(), original:sourceText, sourceCaptureId:uid(), created:stamp, updated:stamp,
+      title:g.title, project:g.project||'Ad hoc', type:g.work_type||'General', scope:g.scope||'Medium', urgency:g.urgency||'Normal',
+      people:[...new Set(g.people)], waiting:!!g.waiting, due:g.due||'', nextAction:g.next_action||g.steps?.[0]||'',
+      steps:g.steps, done:false, progress:0, lastUpdate:'', deletedAt:null, organized:true,
+      history:[
+        {id:uid(),time:stamp,type:'original',text:sourceText},
+        {id:uid(),time:stamp,type:'ai-organise',text:`Orbit organised this capture into: ${g.title}${g.project&&g.project!=='Ad hoc'?` · ${g.project}`:''}.${g.why?' '+g.why:''}`}
+      ]
+    };
+    if(groups.length>1)t.history.push({id:uid(),time:stamp,type:'split',text:`Created as thread ${idx+1} of ${groups.length} from the same original capture.`});
     db.threads.unshift(t);
   });
   saveLocal();
 }
-
 function applyOrganisationToExisting(payload,items){
-  const groups=normaliseOrgResult(payload);
-  if(!groups.length)return;
-  const map=new Map(items.map(x=>[x.id,x]));
-  const used=new Set();
-  const stamp=new Date().toISOString();
+  const groups=normaliseOrgResult(payload); if(!groups.length)return;
+  const map=new Map(items.map(x=>[x.id,x])); const stamp=new Date().toISOString();
   groups.forEach(g=>{
-    const ids=g.source_ids.filter(id=>map.has(id));
-    if(!ids.length)return;
+    const ids=(g.source_ids||[]).filter(id=>map.has(id)); if(!ids.length)return;
     const lead=map.get(ids[0]);
-    const combined=ids.map(id=>map.get(id).original).join('\n\n');
-    lead.original=combined;
-    lead.title=g.title; lead.project=g.project||lead.project||'Ad hoc'; lead.people=[...new Set(g.people)]; lead.due=g.due||lead.due||''; lead.waiting=!!g.waiting; lead.steps=g.steps; lead.updated=stamp; lead.organized=true;
-    lead.history=Array.isArray(lead.history)?lead.history:[];
-    lead.history.push({id:uid(),time:stamp,type:'ai-organise',text:`Merged ${ids.length} captured items into one Work Thread: ${g.title}.${g.why?' '+g.why:''}`});
-    ids.slice(1).forEach(id=>{
-      const x=map.get(id); x.deletedAt=stamp; x.mergedInto=lead.id; x.updated=stamp; x.organized=true; x.history.push({id:uid(),time:stamp,type:'merged',text:`Merged into ${lead.title}. Original retained in history.`});
-      used.add(id);
-    });
+    lead.title=g.title; lead.project=g.project||lead.project||'Ad hoc'; lead.type=g.work_type||lead.type||'General'; lead.scope=g.scope||lead.scope||'Medium'; lead.urgency=g.urgency||lead.urgency||'Normal'; lead.people=[...new Set(g.people)]; lead.due=g.due||lead.due||''; lead.waiting=!!g.waiting; lead.nextAction=g.next_action||g.steps?.[0]||lead.nextAction||''; lead.steps=g.steps; lead.updated=stamp; lead.organized=true; lead.history=Array.isArray(lead.history)?lead.history:[];
+    for(const id of ids){const x=map.get(id); if(id!==lead.id)x.history.push({id:uid(),time:stamp,type:'merged',text:`Merged into ${lead.title}. Original capture retained here: ${String(x.original||'').slice(0,400)}`});}
+    lead.history.push({id:uid(),time:stamp,type:'ai-organise',text:`Reorganised ${ids.length} captured notes into one coherent Work Thread: ${g.title}.${g.why?' '+g.why:''}`});
+    ids.slice(1).forEach(id=>{const x=map.get(id);x.deletedAt=stamp;x.mergedInto=lead.id;x.updated=stamp;});
   });
-  saveLocal();
-  toast(`Orbit organised ${groups.length} coherent work thread${groups.length===1?'':'s'}.`);
+  saveLocal(); toast(`Orbit reorganised ${groups.length} coherent thread${groups.length===1?'':'s'}.`);
 }
+function saveRawCapture(raw){
+  const i=infer(raw); const stamp=new Date().toISOString();
+  db.threads.unshift({id:uid(),original:raw,created:stamp,updated:stamp,title:titleFrom(raw),project:i.project,people:i.people,waiting:i.waiting,due:i.due,steps:i.steps,type:'General',scope:'Unclear',urgency:'Normal',nextAction:i.steps[0]||titleFrom(raw),done:false,progress:0,lastUpdate:'',deletedAt:null,organized:false,history:[{id:uid(),time:stamp,type:'original',text:raw}]});
+  saveLocal();
+}
+function capture(){const raw=document.getElementById('captureInput').value.trim();if(!raw)return;saveRawCapture(raw);document.getElementById('captureInput').value='';clearDraft();toast('Saved raw. Orbit can organise it later.');}
 function saveLocal(){
   localStorage.setItem(DBKEY,JSON.stringify(db));
   snapshotLocal();
-  initHomeAI(); const cap=document.getElementById('captureInput'); if(cap){cap.addEventListener('input',()=>{clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,1500);});}
-render();
+  render();
   renderSnapshots();
   scheduleAutoSync();
 }
@@ -179,13 +184,19 @@ function infer(text){
 }
 function titleFrom(text){const x=text.split(/[\n.;]/)[0].trim();return x.length>72?x.slice(0,69)+'…':x;}
 function purgeExpiredTrash(){const cutoff=Date.now()-5*24*60*60*1000;const before=db.threads.length;db.threads=db.threads.filter(x=>!x.deletedAt||Date.parse(x.deletedAt)>cutoff);return before!==db.threads.length;}
-function capture(){const raw=document.getElementById('captureInput').value.trim();if(!raw)return;const i=infer(raw);const stamp=new Date().toISOString();db.threads.unshift({id:uid(),original:raw,title:titleFrom(raw),created:stamp,updated:stamp,project:i.project,people:i.people,waiting:i.waiting,due:i.due,steps:i.steps,done:false,progress:0,lastUpdate:'',deletedAt:null,history:[{id:uid(),time:stamp,type:'original',text:raw}]});document.getElementById('captureInput').value='';clearDraft();saveLocal();toast('Captured — one work thread, original preserved.');}
+
 function updateThread(id){const x=db.threads.find(t=>t.id===id);if(!x)return;const txt=prompt('Quick progress update — type naturally:');if(!txt)return;x.lastUpdate=txt;x.updated=new Date().toISOString();x.history.push({id:uid(),time:x.updated,type:'progress',text:txt});if(/done|finished|completed|sent|settled/i.test(txt))x.progress=Math.min(90,x.progress+35);else x.progress=Math.min(85,x.progress+20);if(/waiting|await|pending/i.test(txt))x.waiting=true;if(/replied|received|no longer waiting|got it/i.test(txt))x.waiting=false;if(/\b(done|finished|completed)\b/i.test(txt))x.done=true;saveLocal();toast('Progress saved.');}
 function toggleDone(id){const x=db.threads.find(t=>t.id===id);if(!x)return;x.done=!x.done;x.updated=new Date().toISOString();x.history.push({id:uid(),time:x.updated,type:'status',text:x.done?'Marked complete':'Reopened'});saveLocal();}
 function trashThread(id){const x=db.threads.find(t=>t.id===id);if(!x)return;x.deletedAt=new Date().toISOString();x.updated=x.deletedAt;x.history.push({id:uid(),time:x.updated,type:'delete',text:'Moved to Recycling Bin (kept for 5 days).'});saveLocal();toast('Moved to Recycling Bin.');}
 function restoreThread(id){const x=db.threads.find(t=>t.id===id);if(!x)return;x.deletedAt=null;x.updated=new Date().toISOString();x.history.push({id:uid(),time:x.updated,type:'restore',text:'Restored from Recycling Bin.'});saveLocal();toast('Restored.');}
-function reclassifyAdhoc(){const items=db.threads.filter(x=>!x.deletedAt&&x.project==='Ad hoc');if(!items.length){toast('No active Ad hoc items to migrate.');return}const target=prompt('Move all Ad hoc items into which project? Example: EF Study');if(!target)return;const stamp=new Date().toISOString();items.forEach(x=>{x.project=target.trim();x.updated=stamp;x.history.push({id:uid(),time:stamp,type:'reclassify',text:`Reclassified from Ad hoc to ${target.trim()}.`});});db.settings.lastReclassification={from:'Ad hoc',to:target.trim(),count:items.length,time:stamp};saveLocal();toast(`${items.length} Ad hoc items moved to ${target.trim()}.`);}
-function threadCard(x){const cls=x.done?'done':'';const meta=[x.project,x.people.join(', '),x.waiting?'WAITING':'',x.due?x.due.toUpperCase():''].filter(Boolean).join(' · ');const steps=x.lastUpdate?'↳ '+esc(x.lastUpdate):x.steps.slice(0,3).map(s=>'· '+esc(s)).join('<br>');const inTrash=!!x.deletedAt;const trashAge=inTrash?Math.max(0,5-Math.floor((Date.now()-Date.parse(x.deletedAt))/86400000)):0;return `<div class="thread"><div class="thread-row"><button class="check ${cls}" onclick="${inTrash?`restoreThread('${x.id}')`:`toggleDone('${x.id}')`}">${inTrash?'↶':x.done?'✓':''}</button><div class="thread-body"><div class="thread-title">${esc(x.title)}</div><div class="meta">${esc(meta)}${inTrash?' · TRASH · '+trashAge+'d left':''}</div>${steps?`<div class="step-line">${steps}</div>`:''}<div class="pillrow"><span class="pill">original preserved</span><span class="pill">${x.history.length} updates</span><span class="pill">${x.progress}% progressed</span></div>${inTrash?`<div class="actions"><button class="small-btn" onclick="restoreThread('${x.id}')">Restore</button><button class="danger-btn" onclick="hardDelete('${x.id}')">Delete now</button></div>`:!x.done?`<div class="actions"><button class="small-btn" onclick="updateThread('${x.id}')">◐ Update</button><button class="small-btn" onclick="showOriginal('${x.id}')">Original</button><button class="small-btn" onclick="trashThread('${x.id}')">Delete</button></div>`:`<div class="actions"><button class="small-btn" onclick="showOriginal('${x.id}')">History</button><button class="small-btn" onclick="trashThread('${x.id}')">Delete</button></div>`}</div></div></div>`;}
+async function reclassifyAdhoc(){
+ const items=db.threads.filter(x=>!x.deletedAt&&(x.project==='Ad hoc'||!x.organized));
+ if(!items.length){toast('Nothing in the organising queue.');return;}
+ const ok=confirm(`Organise ${items.length} Ad hoc / unsorted notes together? Orbit will merge only when they genuinely belong together.`);
+ if(!ok)return;
+ try{await organiseThreads(items);}catch(e){toast('Could not organise the queue yet. Your notes are still safe.');}
+}
+function threadCard(x){const cls=x.done?'done':'';const meta=[x.project,x.type&&x.type!=='General'?x.type:'',x.waiting?'WAITING':'',x.due?x.due.toUpperCase():''].filter(Boolean).join(' · ');const steps=x.lastUpdate?'↳ '+esc(x.lastUpdate):(x.nextAction?`→ ${esc(x.nextAction)}`:x.steps.slice(0,3).map(s=>'· '+esc(s)).join('<br>'));const inTrash=!!x.deletedAt;const trashAge=inTrash?Math.max(0,5-Math.floor((Date.now()-Date.parse(x.deletedAt))/86400000)):0;return `<div class="thread"><div class="thread-row"><button class="check ${cls}" onclick="${inTrash?`restoreThread('${x.id}')`:`toggleDone('${x.id}')`}">${inTrash?'↶':x.done?'✓':''}</button><div class="thread-body"><div class="thread-title">${esc(x.title)}</div><div class="meta">${esc(meta)}${inTrash?' · TRASH · '+trashAge+'d left':''}</div>${steps?`<div class="step-line">${steps}</div>`:''}<div class="pillrow"><span class="pill">original preserved</span><span class="pill">${esc(x.scope||'scope?')}</span><span class="pill">${esc(x.urgency||'normal')}</span>${x.type&&x.type!=='General'?`<span class="pill">${esc(x.type)}</span>`:''}</div>${inTrash?`<div class="actions"><button class="small-btn" onclick="restoreThread('${x.id}')">Restore</button><button class="danger-btn" onclick="hardDelete('${x.id}')">Delete now</button></div>`:!x.done?`<div class="actions"><button class="small-btn" onclick="updateThread('${x.id}')">◐ Update</button><button class="small-btn" onclick="showOriginal('${x.id}')">Original</button><button class="small-btn" onclick="trashThread('${x.id}')">Delete</button></div>`:`<div class="actions"><button class="small-btn" onclick="showOriginal('${x.id}')">History</button><button class="small-btn" onclick="trashThread('${x.id}')">Delete</button></div>`}</div></div></div>`;}
 function hardDelete(id){if(!confirm('Permanently delete this note now?'))return;db.threads=db.threads.filter(x=>x.id!==id);saveLocal();toast('Deleted permanently.');}
 function showOriginal(id){const x=db.threads.find(t=>t.id===id);const body=`<div class="modal"><div class="modal-panel"><div class="eyebrow">SOURCE / HISTORY</div><h2>${esc(x.title)}</h2><div class="muted">Original capture is immutable reference material.</div><div style="margin-top:14px;white-space:pre-wrap;color:#ddd;font-size:13px;line-height:1.6">${esc(x.original)}</div><div class="section"><div class="section-label">HISTORY</div>${x.history.map(h=>`<div class="memory"><div class="meta">${new Date(h.time).toLocaleString()} · ${esc(h.type)}</div><div style="font-size:12px;color:#c8c9cf;margin-top:4px;white-space:pre-wrap">${esc(h.text)}</div></div>`).join('')}</div><div class="actions"><button class="primary-btn" onclick="closeModal()">Close</button></div></div></div>`;document.getElementById('modalRoot').innerHTML=body;}
 function closeModal(){document.getElementById('modalRoot').innerHTML='';}
@@ -536,7 +547,7 @@ function applyAISuggestion(i){
   toast('Suggestion noted.');
 }
 function initHomeAI(){const run=document.getElementById('homeAIRun');const input=document.getElementById('homeAIInput');if(run&&input){run.addEventListener('click',()=>homeAsk(input.value));input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();homeAsk(input.value);}});}}
-async function homeAsk(q){const query=(q||'').trim();if(!query)return;const out=document.getElementById('homeAIOut');const status=document.getElementById('homeAIStatus');if(out)out.innerHTML='<div class="ai-thinking"><span class="dotpulse"></span>Orbit is thinking…</div>';if(status)status.textContent='Thinking…';try{const payload=await callGenerativeAI(query);showAIResult(out,payload);if(status)status.textContent=payload._cached?'Cached answer':'Gemini · done';}catch(err){localAssistantFallback(query,out,err.message||'AI unavailable');if(status)status.textContent='Local fallback';}}
+async function homeAsk(q){const query=(q||'').trim();if(!query)return;const out=document.getElementById('homeAIOut');const status=document.getElementById('homeAIStatus');if(out)out.innerHTML='<div class="ai-thinking"><span class="dotpulse"></span>Orbit is thinking…</div>';if(status)status.textContent='Thinking…';try{const payload=await callGenerativeAI(query);showAIResult(out,payload);if(status)status.textContent=payload._cached?'Cached answer':'Gemini · done';}catch(err){localAssistantFallback(query,out,err.message||'AI unavailable');if(status)status.textContent='AI unavailable · local fallback';}}
 function openAssistant(initial=''){
   document.getElementById('modalRoot').innerHTML=`<div class="modal"><div class="modal-panel" style="max-height:88dvh;overflow:auto"><div class="eyebrow">ORBIT PA · GEMINI</div><h2>Ask your work assistant.</h2><div class="muted">This is Orbit’s generative PA. It sees a compact slice of your relevant work, not your entire history. It stays concise, warm, and slightly witty. If Gemini is unavailable, Orbit falls back locally.</div><div class="quick-row"><button class="small-btn" onclick="assistantAsk('What should I do now?')">What now?</button><button class="small-btn" onclick="assistantAsk('What is at risk?')">At risk</button><button class="small-btn" onclick="assistantAsk('What am I waiting on?')">Waiting</button><button class="small-btn" onclick="assistantAsk('Plan my day')">Plan today</button><button class="small-btn" onclick="assistantAsk('What have I forgotten?')">Forgotten</button></div><div class="field"><label>ASK ORBIT</label><input id="assistantInput" value="${esc(initial)}" placeholder="e.g. group my Ad hoc notes into EF if that seems right"></div><div class="modal-actions"><button class="primary-btn" id="assistantRun">Ask Orbit</button><button class="small-btn" onclick="closeModal()">Close</button></div><div id="assistantOut" class="assistant-answer" style="margin-top:14px"></div></div></div>`;
   document.getElementById('assistantRun').onclick=()=>assistantAsk(document.getElementById('assistantInput').value);
@@ -591,9 +602,10 @@ function animatePlanets(t=performance.now()){
 function goToPage(target){const nav=document.querySelector(`.nav[data-target="${target}"]`);if(nav)nav.click();}
 function bindSwipe(){document.addEventListener('touchstart',e=>{const t=e.touches[0];if(e.target.closest('textarea,input,button,select')){touchStartX=0;return;}touchStartX=t.clientX;touchStartY=t.clientY;},{passive:true});document.addEventListener('touchend',e=>{if(!touchStartX)return;const t=e.changedTouches[0],dx=t.clientX-touchStartX,dy=t.clientY-touchStartY;touchStartX=0;if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.35)return;const cur=document.querySelector('.nav.active')?.dataset.target||'home';const idx=NAV_TARGETS.indexOf(cur);const next=idx+(dx<0?1:-1);if(next>=0&&next<NAV_TARGETS.length)goToPage(NAV_TARGETS[next]);},{passive:true});}
 for(const n of document.querySelectorAll('.nav'))n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));n.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(n.dataset.target).classList.add('active');render()};
-document.getElementById('captureBtn').onclick=capture;document.getElementById('captureInput').addEventListener('input',()=>{clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,800)});document.getElementById('captureInput').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')capture()});document.getElementById('organiseBtn').onclick=smartOrganise;
-document.getElementById('settingsBtn').onclick=()=>{document.querySelector('[data-target=settings]').click()};document.getElementById('askBtn').onclick=()=>openAssistant();document.getElementById('askBtn2').onclick=()=>openAssistant();document.getElementById('syncBtn').onclick=sync;document.getElementById('accountBtn').onclick=openAuth;document.getElementById('syncNowBtn').onclick=sync;document.getElementById('reclassifyBtn').onclick=reclassifyAdhoc;
+document.getElementById('saveRawBtn').onclick=capture;document.getElementById('organiseAndSaveBtn').onclick=smartOrganise;document.getElementById('captureInput').addEventListener('input',()=>{clearTimeout(draftTimer);draftTimer=setTimeout(saveDraft,800)});document.getElementById('captureInput').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();smartOrganise()}});
+document.getElementById('settingsBtn').onclick=()=>{document.querySelector('[data-target=settings]').click()};document.getElementById('testAiBtn').onclick=async()=>{const el=document.getElementById('aiStatusNote');if(el)el.textContent='Testing Gemini…';try{await callGenerativeAI('Reply with exactly: Orbit is alive.');if(el)el.textContent='Gemini is reachable. Orbit AI is ready.';}catch(e){if(el)el.textContent='Gemini test failed: '+(e.message||'Unknown error');}};document.getElementById('askBtn').onclick=()=>openAssistant();document.getElementById('askBtn2').onclick=()=>openAssistant();document.getElementById('syncBtn').onclick=sync;document.getElementById('accountBtn').onclick=openAuth;document.getElementById('syncNowBtn').onclick=sync;document.getElementById('reclassifyBtn').onclick=reclassifyAdhoc;
 document.querySelectorAll('#filterTabs .chip').forEach(b=>b.onclick=()=>{db.settings.filter=b.dataset.filter;saveLocal()});document.getElementById('memoryBtn').onclick=()=>{const t=document.getElementById('memoryInput').value.trim();if(!t)return;db.memory.unshift({text:t,created:new Date().toISOString()});document.getElementById('memoryInput').value='';saveLocal();toast('Orbit learned that.');};document.getElementById('availabilityBtn').onclick=()=>{const t=document.getElementById('availabilityInput').value.trim();if(!t)return;db.availability.unshift(t);document.getElementById('availabilityInput').value='';saveLocal();};document.getElementById('exportBtn').onclick=exportBackup;document.getElementById('exportHtmlBtn').onclick=exportReadableRecovery;document.getElementById('importInput').onchange=e=>e.target.files[0]&&importBackup(e.target.files[0]);document.getElementById('clearBtn').onclick=()=>{if(confirm('Delete all local Orbit data on this device?')){localStorage.removeItem(DBKEY);location.reload()}};
 // Keep the session and remembered device unlock when returning to the app.
-restoreDraft();window.addEventListener('offline',()=>document.getElementById('offlineBanner').classList.add('show'));window.addEventListener('online',()=>document.getElementById('offlineBanner').classList.remove('show'));if(!navigator.onLine)document.getElementById('offlineBanner').classList.add('show');snapshotLocal();sb.auth.getSession().then(async({data})=>{session=data.session||null; if(session){await restoreVaultKey(); if(activeVaultPass)syncNow(false).catch(()=>{});} render();});window.addEventListener('online',()=>{if(session&&activeVaultPass)syncNow(false);render()});window.addEventListener('focus',()=>{if(session&&activeVaultPass)syncNow(false)});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&session&&activeVaultPass)syncNow(false)});setInterval(()=>{if(document.visibilityState==='visible'&&session&&activeVaultPass)syncNow(false)},20000);bindSwipe();requestAnimationFrame(animatePlanets);render();renderSnapshots();
+restoreDraft();window.addEventListener('offline',()=>document.getElementById('offlineBanner').classList.add('show'));window.addEventListener('online',()=>document.getElementById('offlineBanner').classList.remove('show'));if(!navigator.onLine)document.getElementById('offlineBanner').classList.add('show');snapshotLocal();sb.auth.getSession().then(async({data})=>{session=data.session||null; if(session){await restoreVaultKey(); if(activeVaultPass)syncNow(false).catch(()=>{});} render();});window.addEventListener('online',()=>{if(session&&activeVaultPass)syncNow(false);render()});window.addEventListener('focus',()=>{if(session&&activeVaultPass)syncNow(false)});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&session&&activeVaultPass)syncNow(false)});setInterval(()=>{if(document.visibilityState==='visible'&&session&&activeVaultPass)syncNow(false)},20000);bindSwipe();requestAnimationFrame(animatePlanets);render();renderSnapshots();if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+
 </script></body></html>
