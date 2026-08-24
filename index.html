@@ -75,19 +75,83 @@ function snapshotLocal(){
   if(status)status.textContent=`Safety copies: ${next.map(x=>x.slot+' · '+new Date(x.time).toLocaleString()).join('  |  ')}`;
 }
 
-function smartOrganise(){
-  const active=db.threads.filter(x=>!x.deletedAt&&!x.done);
-  if(!active.length){toast('Nothing to organise yet.');return;}
-  let changed=0;
-  // Locally infer projects/people/deadline/steps again. This is the always-available in-app intelligence layer.
-  for(const x of active){const i=infer(x.original+' '+(x.lastUpdate||''));
-    if(x.project==='Ad hoc' && i.project!=='Ad hoc'){x.project=i.project;changed++;x.history.push({id:uid(),time:new Date().toISOString(),type:'ai',text:`Orbit inferred project: ${i.project}.`});}
-    if(i.people.length){const merged=[...new Set([...(x.people||[]),...i.people])]; if(merged.length!==(x.people||[]).length){x.people=merged;changed++;}}
-    if(i.waiting && !x.waiting){x.waiting=true;changed++;}
-    if(i.due && !x.due){x.due=i.due;changed++;}
-    if(i.steps.length>x.steps.length){x.steps=i.steps;changed++;}
+async function smartOrganise(){
+  const cap=document.getElementById('captureInput');
+  const raw=(cap?.value||'').trim();
+  if(!raw){
+    const inbox=db.threads.filter(x=>!x.deletedAt && !x.organized);
+    if(!inbox.length){toast('Nothing new to organise.');return;}
+    return await organiseThreads(inbox);
   }
-  saveLocal();toast(changed?`Orbit reorganised ${changed} things.`:'Orbit found nothing that needed changing.');
+  const status=document.getElementById('draftBadge');
+  if(status)status.textContent='Orbit is organising…';
+  try{
+    const payload=await callGenerativeAI('__ORGANISE__', {raw, mode:'organise', existing:buildAIContext('organise')});
+    await applyOrganisation(payload, raw);
+    cap.value=''; clearDraft();
+    toast(payload.witty || 'Organised. One messy note in; sensible work threads out.');
+  }catch(err){
+    if(status)status.textContent='Organise failed';
+    toast('Orbit could not organise that yet. Your original text is still safe.');
+    console.error(err);
+  }
+}
+
+async function organiseThreads(items){
+  const raw=items.map(x=>`THREAD ${x.id}\n${x.original}`).join('\n\n');
+  const payload=await callGenerativeAI('__ORGANISE__',{raw,mode:'organise_existing',existing:buildAIContext('organise existing')});
+  applyOrganisationToExisting(payload,items);
+}
+
+function normaliseOrgResult(payload){
+  const groups=Array.isArray(payload?.work_threads)?payload.work_threads:[];
+  return groups.map(g=>({
+    title:String(g.title||'Untitled work').trim(),
+    project:String(g.project||'Ad hoc').trim(),
+    people:Array.isArray(g.people)?g.people.map(String).slice(0,8):[],
+    due:g.due?String(g.due).trim():'',
+    waiting:!!g.waiting,
+    steps:Array.isArray(g.steps)?g.steps.map(String).filter(Boolean).slice(0,8):[],
+    source_indexes:Array.isArray(g.source_indexes)?g.source_indexes.map(Number).filter(Number.isFinite):[],
+    source_ids:Array.isArray(g.source_ids)?g.source_ids.map(String):[],
+    why:String(g.why||'').trim()
+  }));
+}
+
+async function applyOrganisation(payload,raw){
+  const groups=normaliseOrgResult(payload);
+  if(!groups.length){toast('Orbit could not find a coherent work structure. Original text kept.');return;}
+  const stamp=new Date().toISOString();
+  groups.forEach(g=>{
+    const original=raw;
+    const t={id:uid(),original,title:g.title,created:stamp,updated:stamp,project:g.project||'Ad hoc',people:[...new Set(g.people)],waiting:!!g.waiting,due:g.due||'',steps:g.steps,done:false,progress:0,lastUpdate:'',deletedAt:null,organized:true,history:[{id:uid(),time:stamp,type:'original',text:original},{id:uid(),time:stamp,type:'ai-organise',text:`Orbit organised this capture into: ${g.title}${g.project&&g.project!=='Ad hoc'?` · ${g.project}`:''}.${g.why?' '+g.why:''}`} ]};
+    db.threads.unshift(t);
+  });
+  saveLocal();
+}
+
+function applyOrganisationToExisting(payload,items){
+  const groups=normaliseOrgResult(payload);
+  if(!groups.length)return;
+  const map=new Map(items.map(x=>[x.id,x]));
+  const used=new Set();
+  const stamp=new Date().toISOString();
+  groups.forEach(g=>{
+    const ids=g.source_ids.filter(id=>map.has(id));
+    if(!ids.length)return;
+    const lead=map.get(ids[0]);
+    const combined=ids.map(id=>map.get(id).original).join('\n\n');
+    lead.original=combined;
+    lead.title=g.title; lead.project=g.project||lead.project||'Ad hoc'; lead.people=[...new Set(g.people)]; lead.due=g.due||lead.due||''; lead.waiting=!!g.waiting; lead.steps=g.steps; lead.updated=stamp; lead.organized=true;
+    lead.history=Array.isArray(lead.history)?lead.history:[];
+    lead.history.push({id:uid(),time:stamp,type:'ai-organise',text:`Merged ${ids.length} captured items into one Work Thread: ${g.title}.${g.why?' '+g.why:''}`});
+    ids.slice(1).forEach(id=>{
+      const x=map.get(id); x.deletedAt=stamp; x.mergedInto=lead.id; x.updated=stamp; x.organized=true; x.history.push({id:uid(),time:stamp,type:'merged',text:`Merged into ${lead.title}. Original retained in history.`});
+      used.add(id);
+    });
+  });
+  saveLocal();
+  toast(`Orbit organised ${groups.length} coherent work thread${groups.length===1?'':'s'}.`);
 }
 function saveLocal(){
   localStorage.setItem(DBKEY,JSON.stringify(db));
@@ -431,18 +495,23 @@ function aiCacheKey(query){
 }
 function getCachedAI(query){try{const c=JSON.parse(localStorage.getItem(AI_CACHE_KEY)||'{}');const x=c[aiCacheKey(query)];if(x&&Date.now()-x.time<AI_CACHE_TTL)return x.payload;}catch{}return null;}
 function putCachedAI(query,payload){try{const c=JSON.parse(localStorage.getItem(AI_CACHE_KEY)||'{}');const keys=Object.keys(c);while(keys.length>18)delete c[keys.shift()];c[aiCacheKey(query)]={time:Date.now(),payload};localStorage.setItem(AI_CACHE_KEY,JSON.stringify(c));}catch{}}
-async function callGenerativeAI(query){
+async function callGenerativeAI(query, extraContext=null){
   if(aiBusy)throw new Error('Orbit is already thinking. Tiny planet, big queue.');
-  const cached=getCachedAI(query); if(cached){cached._cached=true;return cached;}
+  const cacheQuery=query+(extraContext?JSON.stringify(extraContext):'');
+  if(query!=='__ORGANISE__'){
+    const cached=getCachedAI(cacheQuery); if(cached){cached._cached=true;return cached;}
+  }
   const {data:{session},error:sessionError}=await sb.auth.getSession();
   if(sessionError) throw new Error('Could not read your Orbit session.');
   if(!session?.access_token) throw new Error('Please sign in to Orbit first.');
   aiBusy=true;
   try{
-    const res=await fetch(AI_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({query,context:buildAIContext(query)})});
+    const context=extraContext||buildAIContext(query);
+    const res=await fetch(AI_FUNCTION_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_PUBLISHABLE_KEY},body:JSON.stringify({query,context})});
     const raw=await res.text(); let payload={}; try{payload=raw?JSON.parse(raw):{};}catch{payload={error:raw||'Orbit AI returned an invalid response.'};}
     if(!res.ok)throw new Error(payload.error||`Orbit AI request failed (${res.status}).`);
-    putCachedAI(query,payload); return payload;
+    if(query!=='__ORGANISE__')putCachedAI(cacheQuery,payload);
+    return payload;
   }catch(e){throw e instanceof Error?e:new Error('Orbit AI unavailable.');}
   finally{aiBusy=false;}
 }
