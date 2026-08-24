@@ -1,0 +1,28 @@
+{
+  "name": "Orbit — Personal Work OS",
+  "short_name": "Orbit",
+  "description": "Your adaptive personal work assistant.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "orientation": "portrait-primary",
+  "categories": [
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "./icons/orbit-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/orbit-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
